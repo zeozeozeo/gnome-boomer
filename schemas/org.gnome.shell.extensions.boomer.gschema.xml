@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.boomer"
+          path="/org/gnome/shell/extensions/boomer/">
+    <key name="toggle" type="as">
+      <default><![CDATA[['<Super>z']]]></default>
+      <summary>Open Boomer</summary>
+      <description>
+        Keyboard shortcut that freezes the screen and opens the Boomer
+        zoomer overlay.
+      </description>
+    </key>
+    <key name="config-path" type="s">
+      <default>''</default>
+      <summary>Boomer config file</summary>
+      <description>
+        Path to a Boomer configuration file. Leave empty to use the standard
+        location ($XDG_CONFIG_HOME/boomer/config, usually
+        ~/.config/boomer/config).
+      </description>
+    </key>
+  </schema>
+</schemalist>
