@@ -16,6 +16,8 @@ new magnification tool:
 - zooming uses the same pivot adjustment and friction
 - the flashlight fades in and out and is resized in the same way
 - mirroring flips the image around the pointer
+- animation is driven by the compositor's frame clock, so 120/144 Hz displays
+  run at their native refresh rate instead of a fixed 60 Hz
 - the same `~/.config/boomer/config` file and the same configuration keys are
   used
 

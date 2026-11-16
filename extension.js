@@ -28,7 +28,7 @@ const FL_DELTA_RADIUS_DECELERATION = 10.0;
 const VELOCITY_THRESHOLD = 15.0;
 const FL_MAX_SHADOW = 0.8;
 const FL_SHADOW_SPEED = 6.0;
-const TICK_INTERVAL_MS = 16;
+const TIMELINE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const PROMISIFIED_KEY = '__boomerScreenshotPromisified';
 if (!globalThis[PROMISIFIED_KEY]) {
@@ -55,22 +55,31 @@ function resolveConfigPath(path) {
     return path;
 }
 
-function readConfig(path) {
+function loadFileContentsAsync(file) {
+    return new Promise((resolve, reject) => {
+        file.load_contents_async(null, (source, result) => {
+            try {
+                const [, contents] = source.load_contents_finish(result);
+                resolve(contents);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    });
+}
+
+async function readConfig(path) {
     const config = {...DEFAULT_CONFIG};
 
     if (!path)
         return config;
 
     const file = Gio.File.new_for_path(path);
-    if (!file.query_exists(null))
-        return config;
-
     let contents;
     try {
-        [, contents] = file.load_contents(null);
+        contents = await loadFileContentsAsync(file);
     } catch (e) {
-        console.warn(`Boomer: could not read config file ${path}: ${e.message}`);
-        return config;
+        return null;
     }
 
     const text = new TextDecoder().decode(contents);
@@ -80,17 +89,13 @@ function readConfig(path) {
             continue;
 
         const equals = line.indexOf('=');
-        if (equals < 0) {
-            console.warn(`Boomer: ignoring malformed config line: ${line}`);
+        if (equals < 0)
             continue;
-        }
 
         const key = line.slice(0, equals).trim();
         const value = Number.parseFloat(line.slice(equals + 1).trim());
-        if (!Number.isFinite(value)) {
-            console.warn(`Boomer: ignoring non-numeric value for ${key}`);
+        if (!Number.isFinite(value))
             continue;
-        }
 
         switch (key) {
         case 'min_scale':
@@ -106,7 +111,6 @@ function readConfig(path) {
             config.scaleFriction = value;
             break;
         default:
-            console.warn(`Boomer: ignoring unknown config key ${key}`);
             break;
         }
     }
@@ -121,13 +125,13 @@ class BoomerOverlay {
     }) {
         this._configPath = configPath;
         this._onClosed = onClosed;
-        this._config = readConfig(configPath);
+        this._config = {...DEFAULT_CONFIG};
 
         this._overlay = null;
         this._image = null;
         this._flashlightArea = null;
         this._grab = null;
-        this._timerId = 0;
+        this._timeline = null;
         this._closed = false;
 
         this._width = 0;
@@ -164,13 +168,16 @@ class BoomerOverlay {
         if (this._overlay || this._closed)
             return false;
 
+        this._config = (await readConfig(this._configPath)) ?? {...DEFAULT_CONFIG};
+        if (this._closed)
+            return false;
+
         let content;
         let contentScale;
         try {
             const shooter = new Shell.Screenshot();
             [content, contentScale] = await shooter.screenshot_stage_to_content();
         } catch (e) {
-            console.error(`Boomer: failed to capture the screen: ${e.message}`);
             Main.notifyError(_('Boomer could not capture the screen'), e.message);
             return false;
         }
@@ -184,7 +191,6 @@ class BoomerOverlay {
         try {
             this._createOverlay(content);
         } catch (e) {
-            console.error(`Boomer: failed to create the overlay: ${e.message}`);
             this.close();
             throw e;
         }
@@ -262,10 +268,17 @@ class BoomerOverlay {
         this._applyTransform();
         this._applyFlashlightState();
         this._lastTick = GLib.get_monotonic_time() / 1_000_000;
-        this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TICK_INTERVAL_MS, () => {
-            this._tick();
-            return GLib.SOURCE_CONTINUE;
+
+        // Drive the physics from the stage frame clock instead of a fixed
+        // 60 Hz timer, so 120/144 Hz (and higher) monitors animate at their
+        // native refresh rate.
+        this._timeline = new Clutter.Timeline({
+            duration: TIMELINE_DURATION_MS,
+            repeat_count: -1,
         });
+        this._timeline.set_actor(this._overlay);
+        this._timeline.connect('new-frame', () => this._tick());
+        this._timeline.start();
     }
 
     close() {
@@ -274,16 +287,16 @@ class BoomerOverlay {
 
         this._closed = true;
 
-        if (this._timerId) {
-            GLib.source_remove(this._timerId);
-            this._timerId = 0;
+        if (this._timeline) {
+            this._timeline.stop();
+            this._timeline = null;
         }
 
         if (this._grab) {
             try {
                 Main.popModal(this._grab);
-            } catch (e) {
-                console.warn(`Boomer: could not release the modal grab: ${e.message}`);
+            } catch {
+                // The grab may already have been dismissed by the shell.
             }
             this._grab = null;
         }
@@ -303,14 +316,10 @@ class BoomerOverlay {
             this._onClosed();
     }
 
-    reloadConfig() {
-        const file = Gio.File.new_for_path(this._configPath);
-        if (!file.query_exists(null)) {
-            console.warn(`Boomer: ${this._configPath} does not exist; keeping current configuration`);
-            return;
-        }
-        this._config = readConfig(this._configPath);
-        console.log('Boomer: reloaded configuration');
+    async reloadConfig() {
+        const config = await readConfig(this._configPath);
+        if (config)
+            this._config = config;
     }
 
     _tick() {
@@ -648,7 +657,7 @@ export default class BoomerExtension extends Extension {
             if (!opened)
                 this._overlay = null;
         }).catch(e => {
-            console.error(`Boomer: could not open: ${e.message}`);
+            Main.notifyError(_('Boomer could not open'), e.message);
             if (this._overlay === overlay)
                 this._overlay = null;
         });
