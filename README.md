@@ -1,7 +1,6 @@
 # Boomer for GNOME Shell
 
-A GNOME Shell port of [tsoding's Boomer](https://github.com/tsoding/boomer),
-the zoomer for boomers.
+A GNOME Shell port of [tsoding's Boomer](https://github.com/tsoding/boomer).
 
 Press <kbd>Super</kbd>+<kbd>Z</kbd> to freeze the screen and open a fullscreen
 zoomer over the whole desktop. Pan, zoom, mirror and shine a flashlight on
