@@ -22,14 +22,12 @@ new magnification tool:
 ## Requirements
 
 - GNOME Shell 45 or newer (Wayland or X11)
-- No extra runtime dependencies
 
 ## Install
 
 ### From the GNOME Extensions website
 
-Once the extension is published, install it from
-[extensions.gnome.org](https://extensions.gnome.org/).
+Install it from [extensions.gnome.org](https://extensions.gnome.org/).
 
 ### From this repository
 
@@ -68,10 +66,6 @@ $ make pack             # create boomer@digital.shell-extension.zip
 | Scroll wheel or <kbd>=</kbd> / <kbd>-</kbd> | Zoom in / out |
 | <kbd>Ctrl</kbd> + scroll wheel | Change the flashlight radius (when the flashlight is on) |
 
-As in the original application, the flashlight radius is the only thing changed
-by <kbd>Ctrl</kbd>+scroll while the flashlight is enabled; otherwise Ctrl+scroll
-still zooms.
-
 ## Configuration
 
 Boomer for GNOME Shell reads the same file as the original application:
@@ -97,8 +91,7 @@ $ boomer --new-config
 
 You can also point the extension at a different file from its preferences
 (**Config file**). Press <kbd>R</kbd> after editing the file to reload it while
-the zoomer is open. Unknown keys and non-numeric values are ignored and logged,
-so a typo cannot prevent the extension from opening.
+the zoomer is open.
 
 ## Differences from the original
 
@@ -108,30 +101,6 @@ parts are intentionally not included:
 - `-d:live` / `-d:mitshm` live screenshot updates (Boomer's static screenshot
   mode is the default and the one this extension implements)
 - `-d:select` window tracking
-- `-d:developer` shader hot reloading (there are no GLSL shaders to reload in
-  this implementation)
-
-The OpenGL shader and X11 event loop are replaced by Clutter actors, a Cairo
-overlay for the flashlight, and one timer driving the same physics. On regular
-(non-HiDPI) screens the captured image uses nearest-neighbor sampling, like
-Boomer's `GL_NEAREST`. On HiDPI screens it uses linear filtering, because the
-capture is larger than the logical stage and nearest sampling would discard
-half of the pixels.
-
-## Publishing on extensions.gnome.org
-
-1. Change the UUID in `metadata.json` if you want to publish under your own
-   namespace. The UUID in this repository is `boomer@digital`.
-2. Bump `"version"` in `metadata.json` for every upload.
-3. Run `make pack` to create `boomer@digital.shell-extension.zip`.
-4. Upload the zip at <https://extensions.gnome.org/upload/> and fill in the
-   description, screenshots, and the source code URL. You can also add a
-   `"url"` field pointing to your repository to `metadata.json`.
-5. Test on each GNOME Shell version listed in `metadata.json` before claiming
-   support for it.
-
-The `version` field and the `shell-version` list are the two values the
-extensions website uses to decide what to offer to users.
 
 ## License and credits
 
