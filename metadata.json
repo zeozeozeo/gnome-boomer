@@ -2,6 +2,7 @@
   "uuid": "boomer@digital",
   "name": "Boomer",
   "description": "A GNOME Shell port of tsoding's Boomer screen zoomer.",
+  "url": "https://github.com/zeozeozeo/gnome-boomer",
   "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "settings-schema": "org.gnome.shell.extensions.boomer",
   "gettext-domain": "boomer",
